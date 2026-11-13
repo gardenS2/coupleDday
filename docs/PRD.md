@@ -1,6 +1,6 @@
 # 커플앱 Android/iOS 통합 개발 PRD
 
-> **문서 버전:** 1.0 · **작성일:** 2026-11-07  · 현행화:** 2026-11-07  
+> **문서 버전:** 1.1 · **작성일:** 2026-11-07 · **현행화:** 2026-11-11
 > **대상:** React Native + Expo · Android / iOS · Codex 단계별 구현  
 > **제품 상태:** 기존 Android 앱은 없다. 제공된 Android 화면 스크린샷을 시각적 참고 자료로 사용해 React Native + Expo 앱을 신규 구현 중  
 > **문서 성격:** 화면으로 확인된 사실(F), 구현 제안(P), 확인 필요(TBD)를 구분한 개발 기준서
@@ -350,3 +350,132 @@
 ---
 
 **작성 근거:** 2026-11-07 대화에 업로드된 커플앱 스크린샷 8장. 실제 소스코드, API 명세, 기존 데이터베이스, iOS 기기 검증 결과는 제공되지 않았으므로 구현 결정 및 완성 여부는 추정하지 않았다.
+
+
+---
+
+## 15. [2026-11-11 승인] Google Calendar 양방향 연동 확장 (GC)
+
+> **승인 범위:** A/B가 **각자의 Google 계정**으로 접근하고, **커플당 1개의 공유 Google 캘린더**를 사용한다. 커플앱과 Google에서 모두 일정을 등록·수정한다. Supabase가 장애를 겪을 때도 **마지막으로 Google에 동기화된 일정**은 Google에서 조회할 수 있어야 한다. 본 절은 기존 D-02·D-03의 Google 캘린더 일정 공유 관련 TBD를 구체화한다. 기존 00~16단계와 생리·건강 데이터 정책은 유지한다.
+>
+> **적용 원칙:** 현행 코드에서 구현 완료가 확인되지 않은 기능은 '설계 확정'과 '구현 완료'를 혼동하지 않는다. 이후 GC-00에서 실제 스키마·인증 흐름을 확인한다. 주 사용자의 06/07 단계 및 기간 일정(EVT-RANGE-01) 구현 상태를 우선 검증하고 재사용한다.
+
+### 15.1 제품 범위·비범위
+
+| ID | 우선 | 요구사항 / 수용 기준 |
+|---|---|---|
+| GC-AUTH-01 | P0 | 기존 Supabase auth.user ID·커플 연결 유지. 각자의 Google 계정으로 로그인하거나 연결 가능; 계정 중복 생성 방지. |
+| GC-AUTH-02 | P0 | Google 로그인(신원 인증)과 Calendar API 사용 동의(데이터 접근)를 별개로 구분한다. 필요한 경우 별도 OAuth 동의를 받는다. |
+| GC-CAL-01 | P0 | 커플당 **선택된 공유 캘린더 1개**만 동기화. A/B 편집 권한 확인. 개인 기본 캘린더나 제3자 캘린더 자동 수집 금지. |
+| GC-SYNC-01 | P0 | 앱→Google 추가/수정/삭제; Google→앱 추가/수정/삭제. 통합 달력·홈에 반영. |
+| GC-SYNC-02 | P0 | 이벤트를 **1회만** 생성하도록 ID 매핑·작업 중복 방지; 역방향 변경의 무한 재동기화 방지. |
+| GC-SYNC-03 | P0 | 스냅샷·버전·etag를 기반으로 동시 수정 충돌 감지; 손실 위험 시 자동 덮어쓰기 금지. |
+| GC-DEL-01 | P0 | 삭제는 복원용 스냅샷·tombstone 보관. 대량 삭제·권한 오류·복구 중에는 파괴적 전파 중단. |
+| GC-RES-01 | P0 | 장애/DB 재구성 시 선택된 Google 캘린더에서 **미리보기 후 승인**하여 일정 복원. |
+| GC-OPS-01 | P1 | 증분 동기화·변경 알림·정기 폴링, 재시도, 인증 갱신, 상태 표시·재연결. |
+| GC-PRIV-01 | P0 | 생리 기간·증상·기분·메모, 사진, 비공개 일기, 선물 메모, 커플 개인정보는 기본적으로 Google에 전송하지 않는다. |
+| GC-TEST-01 | P0 | 양쪽 동시 변경, 중복, 삭제, Supabase/Google 장애, 토큰 만료, 공유 취소를 검증한다. |
+
+**1차 지원 이벤트:** `EVT-01~04`의 일반 일정·기념일, `EVT-RANGE-01`의 종일 날짜 범위, `EVT-03`의 검증된 매년 반복 종일 일정. `EVT-RANGE-01`이 실제 코드/문서에 아직 없다면 GC-00에서 이를 선행 항목으로 보고한다. **Google의 시간 지정 이벤트**는 현재 PRD Event 모델이 date-only이므로 별도 시간/타임존 필드 확장 및 화면 UX 검증 전까지 읽기 전용 미리보기 또는 '지원되지 않는 일정'으로 분류하고 **임의 변환·덮어쓰기·삭제하지 않는다**. 사용자에게 이 범위 제한을 명확히 알린다. 시간 지정 일정의 완전한 양방향 지원은 GC-09에, 반복 예외 편집은 GC-10에 별도 구현한다.
+
+**일정 목록 범위:** Google의 선택한 공유 캘린더에 속한 일정만 읽는다. 초기 연결 시 기존 Google 일정의 앱 가져오기 범위를 **미리보기·명시적 승인**으로 결정한다. 타인의 개인 캘린더 일정은 읽거나 복제하지 않는다.
+
+### 15.2 계정·권한·토큰 설계
+
+1. 각자 본인의 Google 계정 사용. 비밀번호 공유 금지. 공유 캘린더 소유자가 편집 권한으로 상대를 초대한다.
+2. Supabase 세션과 커플 ID를 그대로 유지. 기존 사용자에 Google 로그인 추가 시 Supabase **Identity Linking** 또는 현재 코드와 일관된 안전한 연결 방법을 사용하고 새 user ID 생성으로 기존 데이터를 분리하지 않는다.
+3. Google **로그인 토큰 ≠ Calendar API 장기 접근 권한**. Calendar 동의 범위는 `calendar.calendarlist.readonly`와 `calendar.events` 등 필요한 최소 scope를 검토한다. API 접근을 연결 해제/철회할 수 있어야 한다.
+4. Google OAuth `access_token`과 `refresh_token`은 노출되면 안 된다. 가능한 경우 서버의 보호된 저장소에 암호화해 보관하며 사용자 앱에 서비스 역할 키/서버 비밀을 넣지 않는다. Supabase의 `provider_refresh_token` 존재를 가정하지 않고 실제 반환 및 갱신 정책을 확인한다.
+5. A/B 각각 Calendar 동의를 받을 수 있지만 **커플·calendarId 조합당 서버 동기화 파이프라인은 1개만 활성화**한다. 동기화 토큰과 watch 채널은 사용자 계정별 중복 생성하지 않는다. 기본 서버 실행 신원에 문제가 생기면 재인증 또는 사전 승인된 대체 신원으로 전환하는 절차를 마련한다.
+6. 선택 캘린더와 ACL 접근 권한의 변경·철회 시 동기화를 일시 정지한다. 네트워크/403 오류를 삭제로 해석하지 않는다.
+7. 배포 전 Google OAuth 동의 화면, 테스트 사용자, 검증 필요 여부 및 iOS 앱 로그인 정책을 재확인한다.
+
+### 15.3 동기화 아키텍처·데이터 매핑
+
+**GC-01 기반 상태 (2026-11-13):** 원격 DB에 GC-01의 7개 테이블과 제약조건/RLS가 적용됐다. 이는 동기화 기반 스키마만 준비한 상태이며 Google OAuth, Google Calendar API, Edge Function/Worker, webhook 및 실제 일정 동기화는 구현되지 않았다. 아래 흐름은 후속 구현 설계다.
+
+- **앱 발신:** 앱 저장 요청 → Supabase Event 트랜잭션/버전 증가 → 동기화 outbox 생성 → 승인된 서버 워커가 Google 이벤트 생성/패치/삭제 → `google_event_id`, `etag`, 마지막 동기화 시점 기록.
+- **Google 발신:** Google `events.watch` HTTPS webhook → 인증된 채널 헤더 검증 → **내용 없는 변경 신호**를 큐에 적재 → 서버에서 `events.list` + `syncToken` 조회 → 기존 매핑 기준으로 앱 Event 반영.
+- **누락 보완:** 채널 만료 전 갱신 + 정기 폴링/증분 동기화. Google webhook이 완전한 변경 내용을 보내지 않고 메시지가 누락될 수 있으므로 webhook 단독 의존 금지.
+- **키:** 커플 내부 `event.id`와 `(calendar_id, google_event_id)`의 고유 매핑. Google `iCalUID`는 반복 발생 건과 ID 의미가 달라 **유일한 매핑 키로 쓰지 않는다**. 선택된 Google 캘린더의 이벤트 `extendedProperties.private`에 앱 이벤트 식별자를 저장할 수 있지만 비밀·개인정보는 넣지 않는다.
+- **중복 방지:** `operation_id`/idempotency key, unique constraints, 재실행 가능한 작업 상태와 레코드 잠금으로 동일 작업 2회 수행 방지. 앱에서 파생한 Google 변경이 webhook으로 돌아와도 다시 내보내지 않는다.
+- **시간:** 종일 이벤트는 `YYYY-MM-DD` date-only 유지. 앱의 종료일은 포함(end inclusive), Google 종일 이벤트 `end.date`는 미포함(exclusive)이므로 **종료일 +1일**로 변환. 역변환 시 -1일. 자정·DST·월말·연말 단위 테스트.
+- **반복:** Google 반복 일정의 `RRULE` 마스터 이벤트와 개별 발생(exception, cancelled instance)은 구분. 2/29, 음력 윤달, 예외 발생 건 편집은 정책 검증 전 자동 덮어쓰지 않고 충돌/지원 미정으로 분리.
+- **보안:** 사용자 화면에서 서버 내부 동기화 자격증명을 조회하지 못하게 RLS와 Edge Function 인증 분리. 비공개 건강 데이터를 로그나 Google 설명/메타데이터에 쓰지 않는다.
+
+**채택된 테이블 이름과 역할:**
+
+| 엔터티 | 주요 필드 | 목적 |
+|---|---|---|
+| `google_calendar_connections` | couple_id, calendar_id, owner_user_id, status, authorization_epoch | 커플의 공유 캘린더 및 승인자 상태; 커플당 live pipeline 제한 |
+| `google_calendar_credentials` | owner_user_id, google_sub, refresh-token ciphertext/nonce/key version/status | 서버 전용 암호화 OAuth 자격증명 |
+| `google_calendar_event_mappings` | event_key/event_id, calendar_id, google_event_id, ETag, base snapshot/version | 앱 일정과 Google 일정 ID 연결 |
+| `google_calendar_sync_state` | syncToken, watch channel/resource/expiry, retry state, worker lease | 단일 sync pipeline 상태 |
+| `google_calendar_outbox` | operation_id, event_key, source_version, operation, snapshot, retry state | 재시도 가능한 서버 전용 변경 큐 |
+| `google_calendar_conflicts` | app/Google/base snapshots, versions, ETag, resolution state | 충돌 이력; 멤버는 허용 열만 SELECT |
+| `google_calendar_recovery_records` | historical connection/event key, deletion source, snapshot, 30-day expiry | 연결 삭제 후에도 유지되는 복구 기록; 민감 JSON은 클라이언트 차단 |
+
+정식 migration은 `spikes/auth-couple-poc/supabase/migrations/20261113000100_google_calendar_sync.sql`이며, 승인자 변경 후 이전 토큰 폐기 완료를 허용하는 보완 migration은 `20261113000200_google_calendar_revocation_finalize.sql`이다. 실제 적용 기록과 검증 범위는 `docs/google-calendar-sync-deployment.md`에 정리한다. 이 스키마는 동기화 실행을 활성화하지 않는다.
+
+### 15.4 충돌 해결 정책 (승인된 기본값)
+
+- **단독 수정:** 한쪽만 마지막 동기화 스냅샷보다 바뀐 경우 다른 쪽으로 전파.
+- **서로 다른 필드:** 필드 단위 병합이 유실 없이 검증되는 경우에만 자동 병합; 그렇지 않으면 보류.
+- **동일 필드 동시 수정:** '앱 버전 / Google 버전'을 모두 보존하고 `CONFLICT`로 표시. 사용자 선택(앱 버전 유지·Google 버전 유지·수동 병합) 후 갱신. 동기화되지 않은 다른 이벤트는 계속 처리.
+- **수정 vs 삭제:** 자동 삭제/복구하지 말고 충돌로 보류.
+- **버전 제어:** 앱 Event는 낙관적 version 조건, Google Event는 최신 `etag` + `If-Match`; 412 충돌 응답 후 최신 데이터 재조회. 수정 시간이 더 늦다는 이유만으로 덮어쓰지 않는다.
+- **변경 원천:** `source=app|google|restore`와 마지막 적용 작업 ID를 남기고 동기화 루프 방지.
+
+### 15.5 삭제 보호·복원 정책
+
+1. 앱에서 **삭제 클릭 시 2차 확인**. DB에는 즉시 hard delete 대신 tombstone과 최소 30일 복원용 스냅샷을 저장하고 화면에서는 숨긴다.
+2. 일반 단건 삭제는 스냅샷 저장 성공 확인 후 Google로 전파한다. Google 쪽 삭제는 이미 외부에서 이뤄진 경우 앱이 이를 감지하되, **스냅샷 저장과 권한 정상 확인 전 다른 시스템에 파괴적 변경을 전파하지 않는다**.
+3. 동기화 한 차례에 5건 이상 또는 전체 추적 일정의 20% 이상이면서 2건 이상인 삭제가 감지되면 **대량 삭제 보호 잠금** 후 수동 승인. 수치는 초기 제안이며 운영 데이터에 맞춰 조정한다.
+4. Google API 401/403/404, Google 공유 캘린더 접근 상실, `syncToken` 만료(410), 초기 동기화 결과 0건을 **무조건 삭제 신호로 판단하지 않는다**. 확인된 `cancelled` 상태와 반복 일정의 삭제된 인스턴스를 구별한다.
+5. Google에서 직접 삭제된 이벤트는 Google에서 이미 제거된 상태이므로, 30일 복원 보장은 **앱 자체 스냅샷이 남아 있는 경우에만** 성립한다. 실수 삭제는 앱의 복원 UI로 사용자 승인 후 다시 생성·매핑한다.
+6. 사용자가 요청한 계정/서비스 데이터 완전 삭제 및 동의 철회는 법·정책에 따른 별도 처리로, 복원 보관 정책보다 우선한다.
+
+### 15.6 장애·복원·재연결 정책
+
+- **Supabase 장애:** Google에 성공적으로 동기화된 마지막 일정은 Google 캘린더 UI로 조회·편집 가능. 다만 Supabase의 동기화 워커가 다운되면 앱과의 동기화가 정지하고 Google에서의 변경은 Google 측에만 남는다. 복구 후 재인증·증분/전체 조회로 따라잡는다.
+- **Supabase 프로젝트 유실/재구축:** Google 계정 재동의 → 기존 공유 캘린더 선택 → 캘린더 전체 목록 확인 → 앱 소유 ID 태그/일정 제목·날짜 확인 → 복원 미리보기(신규·변경·중복·삭제 후보) → 사용자 승인 → 새 Supabase Event와 매핑 생성 → 양방향 재개. **빈 DB를 기준으로 Google 일정을 삭제하지 않는다.**
+- **410 Gone:** Google syncToken을 무효화하고 **Google 미러 스냅샷만 다시 수집**한다. 기존 Supabase Event 전체 삭제 금지; 재수집 후 차이 비교·충돌/삭제 잠금 확인.
+- **401:** 토큰 갱신/재동의 필요. **403/429:** 원인 분기(권한 vs 할당량) 및 지수 백오프. **412:** 조건부 수정 충돌. **5xx:** 재시도. 오류 상태를 사용자에게 표시.
+- **복구 게이트:** 복원 전 DB 백업 확인, 스냅샷 저장, 삭제 자동 전파 비활성화, 승인된 캘린더 외 데이터 사용 금지, 재동기화 후 이벤트 수/샘플 대조 및 사용자 확인.
+- **백업 한계:** Google Calendar는 앱 데이터 전체의 백업이 아님. 사진·건강 기록·커플 연결·비밀 메모는 별도 Supabase 백업/내보내기 정책 필요. 마지막 성공 동기화 시각을 UI에 표시.
+
+### 15.7 구현 게이트와 테스트
+
+| ID | 검증 시나리오 | 기대 결과 |
+|---|---|---|
+| GC-T01 | 앱에서 일정 추가 → Google | 같은 공유 캘린더에 1건만 생성 |
+| GC-T02 | Google에서 일정 추가 → 앱 | 선택된 공유 캘린더의 일정 1건만 표시 |
+| GC-T03 | A 앱 수정 + B Google 서로 다른 필드 | 안전한 병합 또는 충돌 보류, 유실 없음 |
+| GC-T04 | A 앱 수정 + B Google 동일 필드 | CONFLICT, 어느 쪽도 임의 덮어쓰지 않음 |
+| GC-T05 | 앱 삭제/Google 삭제, 삭제 취소·복원 | tombstone 보존, 승인 후 재생성 |
+| GC-T06 | 5건 이상 대량 삭제 또는 유효 캘린더 공백 | 자동 삭제 전파 정지 |
+| GC-T07 | 2027-01-11~13 종일 일정 | Google end.date=2027-01-14, 역변환 정상 |
+| GC-T08 | 매년 반복·마스터 수정·발생 예외 | 지원 범위 정확, 미지원 경우 보류 |
+| GC-T09 | webhook 중복/유실, 채널 만료, 410 | 재조회로 복구, 전체 DB 삭제 없음 |
+| GC-T10 | 401/403/429/412/5xx | 분기 처리, 재시도·충돌·재연결 상태 |
+| GC-T11 | Supabase 장애 후 Google에서 수정 | Google에는 보존, 복구 뒤 병합/승인 |
+| GC-T12 | 빈 Supabase 새 프로젝트로 복원 | 미리보기·승인 후 일정 복구, Google 삭제 없음 |
+| GC-T13 | 기존 커플 계정에 Google 연결 | 원래 Supabase user ID·커플 및 건강 기록 유지 |
+| GC-T14 | 생리·사진·선물 메모 | Google 전송/로그 유출 없음 |
+| GC-T15 | Google 시간 지정 일정 | 지원 단계 전에는 안전하게 제외·표시; 시간 값 손실 없음 |
+| GC-T16 | A/B 편집 권한 해제·계정 철회 | 동기화 정지·재연결 안내; 타인 데이터 침범 없음 |
+
+### 15.8 단계 순서 / 권한 / 운영 결정
+
+`docs/CODEX_TASK.md`의 GC-00~GC-11를 **기존 작업과 별도 티켓**으로 진행한다. 06·07·EVT-RANGE-01의 현재 구현을 먼저 감사하고 재사용한다. 각 티켓은 구현 → 관련 테스트 → 사용자 확인 → 다음 단계 순서이다. GC-01 DB 기반은 원격 적용됐으나 OAuth·Worker·webhook·양방향 동기화는 미구현이다. `couple_events` 삭제와 recovery/outbox의 같은 트랜잭션 원자성이 구현·검증되기 전까지 Google 일정 삭제 전파를 금지한다. Google Cloud 프로젝트 구성·OAuth 동의 화면·실제 캘린더 연결·삭제/복원 실행은 명시적으로 승인된 범위에서만 수행한다.
+
+**공식 기술 근거(2026-11-11 확인):**
+- Google Calendar syncToken/410: https://developers.google.com/workspace/calendar/api/guides/sync
+- 변경 알림/watch 및 만료: https://developers.google.com/workspace/calendar/api/guides/push
+- 권한 범위: https://developers.google.com/workspace/calendar/api/auth
+- 일정 버전/ETag: https://developers.google.com/workspace/calendar/api/guides/version-resources
+- 이벤트 필드 및 ID: https://developers.google.com/workspace/calendar/api/v3/reference/events
+- 숨김 메타데이터: https://developers.google.com/workspace/calendar/api/guides/extended-properties
+- Supabase Auth Identity Linking: https://supabase.com/docs/guides/auth/auth-identity-linking
+- Supabase provider token 갱신 책임: https://supabase.com/docs/guides/auth/social-sign-in
+- Supabase cron/functions: https://supabase.com/docs/guides/functions/schedule-functions
