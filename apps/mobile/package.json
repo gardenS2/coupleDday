@@ -1,0 +1,51 @@
+{
+  "name": "couple-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "npm run start:dev --",
+    "ios": "npm run ios:dev --",
+    "android": "npm run android:dev --",
+    "typecheck": "tsc --noEmit",
+    "lint": "expo lint",
+    "start:dev": "node scripts/expo-env.mjs dev start",
+    "android:dev": "node scripts/expo-env.mjs dev android",
+    "ios:dev": "node scripts/expo-env.mjs dev ios",
+    "export:dev": "node scripts/expo-env.mjs dev export",
+    "start:prod": "node scripts/expo-env.mjs prod start",
+    "android:prod": "node scripts/expo-env.mjs prod android",
+    "ios:prod": "node scripts/expo-env.mjs prod ios",
+    "export:prod": "node scripts/expo-env.mjs prod export",
+    "test:env": "node --test tests/environment.test.mjs",
+    "test:cycle": "node --experimental-strip-types --test tests/cyclePrediction.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "expo": "~57.0.32",
+    "expo-clipboard": "~57.0.2",
+    "expo-constants": "~57.0.22",
+    "expo-linking": "~57.0.13",
+    "expo-router": "~57.0.30",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-url-polyfill": "^4.0.0",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.14",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

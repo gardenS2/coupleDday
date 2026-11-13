@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "plugins": [
+      [
+        "expo-widgets",
+        {
+          "enableAndroid": true,
+          "widgets": [
+            {
+              "name": "DdayWidget",
+              "displayName": "우리의 D-Day",
+              "description": "Fictional data only",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ]
+              },
+              "android": {
+                "targetCellWidth": 2,
+                "targetCellHeight": 2
+              }
+            },
+            {
+              "name": "CalendarWidget",
+              "displayName": "이번 달 일정",
+              "description": "Fictional data only",
+              "ios": {
+                "supportedFamilies": [
+                  "systemMedium",
+                  "systemLarge"
+                ]
+              },
+              "android": {
+                "targetCellWidth": 4,
+                "targetCellHeight": 2
+              }
+            }
+          ]
+        }
+      ],
+      "expo-asset"
+    ],
+    "name": "Couple Widget PoC",
+    "slug": "widget-poc",
+    "ios": {
+      "bundleIdentifier": "com.example.couplewidgetpoc"
+    },
+    "android": {
+      "package": "com.example.couplewidgetpoc"
+    }
+  }
+}

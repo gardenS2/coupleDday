@@ -1,0 +1,16 @@
+{
+  "name": "couple-auth-local-verification",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/local.mjs start",
+    "stop": "node scripts/local.mjs stop",
+    "migrate": "node scripts/local.mjs migrate",
+    "test": "node scripts/local.mjs test",
+    "lint:db": "node scripts/local.mjs lint",
+    "env:mobile": "node scripts/local.mjs mobile-env"
+  },
+  "devDependencies": {
+    "supabase": "2.122.0"
+  }
+}

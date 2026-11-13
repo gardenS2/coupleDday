@@ -1,6 +1,6 @@
 # 개발·운영 환경과 VS Code 인수인계
 
-2026-11-11 기준. 저장소 전체 루트를 `coupleDday/`로 가정합니다. 대상 GitHub 저장소는 `gardenS2/coupleDday`입니다. 원격 저장소의 `development`/`production` 환경은 생성되어 있습니다. 프로젝트 문서만 GitHub에 업로드했으며, 실제 Secret 등록·앱 소스 업로드·Actions 실행은 아직 하지 않았습니다.
+2026-11-13 기준. 저장소 전체 루트는 `coupleDday/`입니다. 대상 GitHub 저장소는 `gardenS2/coupleDday`입니다. 프로젝트 문서와 소스 코드를 GitHub에 업로드했습니다. GitHub Actions와 실제 Secret 등록 여부는 GitHub 저장소에서 확인하세요.
 
 ## 1. 바로 실행하기
 
@@ -92,7 +92,7 @@ gh secret set MOBILE_ENV_FILE --repo gardenS2/coupleDday --env production < apps
 
 GitHub Secrets는 등록 후 원문을 다운로드하는 저장소가 아닙니다. 로컬 실행에는 로컬 파일을 별도로 가지고 있어야 합니다. 파일이 과거에 이미 커밋됐다면 ignore만으로 기록이 지워지지 않습니다. 추적 여부를 확인하고 필요하면 추적 해제와 키 교체를 수행하세요.
 
-**현재 폴더 주의점:** 루트는 아직 Git 저장소가 아니며, 루트 `.gitignore`라는 이름은 기존 이미지가 있는 **디렉터리**입니다. 이를 임의로 옮기거나 지우지 않았습니다. 앱 환경 파일 제외 규칙은 `apps/mobile/.gitignore`에 있으므로 루트를 Git으로 관리할 때도 적용됩니다. 저장소 최초 등록 전에 기존 `.gitignore/` 이미지 폴더를 Git 외부로 보관할지 정리하고 루트 ignore 파일을 마련해야 합니다. 원본 개인 이미지를 `git add .`로 올리지 마세요. `apps/mobile`만 별도 저장소로 올릴 경우 워크플로 위치와 `working-directory`/lockfile 경로를 수정해야 합니다.
+**비공개 디자인 이미지:** 참고 스크린샷은 `docs/references/private/`에 보관하며 루트 `.gitignore`에서 제외합니다. 이미지는 로컬 전용으로 유지하고 원격 저장소에 추가하지 마세요. 앱 환경 파일 및 생성물도 루트와 `apps/mobile/.gitignore` 규칙으로 제외됩니다.
 
 ## 4. Docker는 언제 필요한가?
 
@@ -166,7 +166,7 @@ npm run stop
 
 ## GitHub 연결 확인 결과
 
-`https://github.com/gardenS2/coupleDday` 저장소는 확인 당시 커밋이 없는 빈 저장소였습니다. 2026-11-11에는 프로젝트 문서만 업로드했으며, 앱 소스와 `.github/workflows/mobile-check.yml`은 아직 업로드하지 않았습니다. 실제 키·원본 개인 이미지·코드는 업로드하지 않았습니다.
+`https://github.com/gardenS2/coupleDday`에 프로젝트 문서와 앱/DB 소스를 업로드했습니다. 실제 키와 원본 개인 이미지는 업로드하지 않습니다.
 
 
 ## 7. 클라우드 개발 DB 초기 적용 (2026-11-05)

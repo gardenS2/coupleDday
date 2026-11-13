@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "우리의 온도",
+    "slug": "couple-mobile",
+    "scheme": "coupledday",
+    "version": "0.1.0",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.example.coupledday.mobile"
+    },
+    "android": {
+      "package": "com.example.coupledday.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-status-bar"
+    ]
+  }
+}

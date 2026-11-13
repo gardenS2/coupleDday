@@ -1,0 +1,33 @@
+# Local operating system and IDE files
+.DS_Store
+.idea/
+
+# Local environment files and credentials
+.env
+.env.*
+!.env.*.example
+*.keystore
+*.jks
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+
+# Dependencies and generated build output
+**/node_modules/
+**/.expo/
+**/dist/
+**/build/
+**/Pods/
+**/.gradle/
+**/.cxx/
+**/*.tsbuildinfo
+
+# Local Supabase/Docker state, logs and private design references
+**/supabase/.temp/
+**/supabase/.branches/
+**/.local-docker/
+**/logs/
+*.log
+/docs/references/private/

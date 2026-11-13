@@ -1,0 +1,42 @@
+name: Mobile environment check
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Supabase environment to bundle
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment == 'prod' && 'production' || 'development' }}
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      APP_ENV: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - name: Restore selected environment from GitHub Secrets
+        run: node scripts/ci-env.mjs write "$APP_ENV"
+        env:
+          MOBILE_ENV_FILE: ${{ secrets.MOBILE_ENV_FILE }}
+      - run: npm run test:env
+      - run: npm run test:cycle
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Validate Android, iOS and web JS bundles
+        run: node scripts/expo-env.mjs "$APP_ENV" export
+      - name: Remove temporary environment file
+        if: always()
+        run: node scripts/ci-env.mjs clean "$APP_ENV"

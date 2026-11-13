@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+ios/
+android/
+dist/
+.env*
+*.keystore
+*.mobileprovision
+
+# Also exclude legacy misspelled credential files
+.evn*
+!.env.dev.example
+!.env.prod.example
+logs/

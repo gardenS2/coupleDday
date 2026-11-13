@@ -6,7 +6,7 @@
 
 작업 루트에는 `couple_codex_starter/README.md`, `CODEX_FIRST_TASK.md`, 숨김 메타데이터와 참고 JPG 8개가 있다. 원본 앱 소스, APK, Gradle, Flutter pubspec, 기존 JS 프로젝트, DB, AGENTS.md는 발견되지 않았다. 이후 생성된 `spikes/widget-poc/`는 새 실험이므로 기존 앱의 기술 스택 증거가 아니다. 단말 로컬 저장이라는 설명은 사용자 제공 정보이며 SQLite/Room/SharedPreferences/AsyncStorage 중 무엇인지는 미확인이다.
 
-실제 이미지 위치는 `.gitignore/docs/references/private/`다. `.gitignore`가 **파일이 아닌 디렉터리**이고 이 루트는 Git 저장소가 아니다. 따라서 무시 규칙이 설정된 상태가 아니다. 기존 경로는 변경하지 않았다. 향후 저장소 초기화 전 이미지를 저장소 밖으로 이동하고 정상적인 `.gitignore` 파일을 별도로 마련한 후 `git check-ignore`와 추적 목록을 확인해야 한다. 현재 루트에서 `git add .` 또는 원격 업로드를 해서는 안 된다.
+실제 이미지 위치는 `docs/references/private/`이며, 원본 스크린샷은 공개 저장소에 포함하지 않는다. 저장소 초기화 과정에서 해당 폴더는 프로젝트 루트 `.gitignore`에서 제외한다.
 
 확실성: **기존 화면에서 확인**은 정지 이미지의 표시만, **버튼 존재만 확인**은 상호작용처럼 보이는 요소만, **미확인**은 터치·저장·권한·계산 결과를 직접 실행하지 않았다는 뜻이다. 8개 JPG를 각각 직접 열어 확인했다.
 
