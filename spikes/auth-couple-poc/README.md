@@ -31,4 +31,4 @@ npm run stop
 
 ## 모바일 로컬 연결
 
-`npm start`와 `npm run migrate` 후 `npm run env:mobile`로 비어 있는 모바일 `.env.dev`에 로컬 URL/공개 키를 기록합니다. 값이 이미 있으면 덮어쓰지 않습니다. Android/iOS 실행 및 Docker 필요 여부는 [개발 인수인계](../../docs/07-developer-handoff.md)를 참고하세요.
+`npm start`와 `npm run migrate` 후 `npm run env:mobile`로 비어 있는 `../../config/env/.env.dev`에 로컬 URL/공개 키를 기록합니다. 값이 이미 있으면 덮어쓰지 않습니다. Android/iOS 실행 및 Docker 필요 여부는 [개발 인수인계](../../docs/07-developer-handoff.md)를 참고하세요.

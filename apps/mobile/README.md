@@ -13,11 +13,19 @@ npm run ios:dev
 # 또는 npm run android:dev
 ```
 
-- 개발: `.env.dev`, 운영: `.env.prod`. 실제 파일은 Git 제외입니다.
-- 신규 체크아웃에서는 `.env.dev.example`, `.env.prod.example`을 각각 복사한 뒤 URL과 공개 키를 입력합니다.
+- 개발: `config/env/.env.dev`, 운영: `config/env/.env.prod`. 실제 파일은 Git 제외입니다.
+- 신규 체크아웃에서는 저장소 루트에서 `config/env/.env.dev.example`, `config/env/.env.prod.example`을 각각 복사한 뒤 URL과 공개 키를 입력합니다.
+- 로컬 서명 자격증명이 필요한 경우 `config/keys/`에 둘 수 있습니다. 실제 키 파일은 Git 제외이며, CI/배포 키는 GitHub Secrets 또는 EAS에 보관합니다.
 - `src/config/supabase.ts`에는 키를 직접 입력하지 않습니다. 이전 `.env.local`/소스 직접 입력 방식은 사용하지 않습니다.
 - `npm run ios:prod`, `npm run android:prod`는 운영 설정의 로컬 Release 실행입니다. 스토어 업로드 명령이 아닙니다.
 - GitHub development/production 환경 각각의 `MOBILE_ENV_FILE` Secret을 루트 `.github/workflows/mobile-check.yml`이 주입합니다. 워크플로는 코드/번들만 검사하며 DB·스토어에 배포하지 않습니다.
+
+환경 파일 만들기 (저장소 루트에서 실행):
+
+```sh
+cp -n config/env/.env.dev.example config/env/.env.dev
+cp -n config/env/.env.prod.example config/env/.env.prod
+```
 
 ## Supabase 스키마
 

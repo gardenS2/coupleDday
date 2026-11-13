@@ -1,4 +1,4 @@
-// Values are injected by scripts/expo-env.mjs from .env.dev or .env.prod.
+// Values are injected by scripts/expo-env.mjs from config/env/.env.dev or .env.prod.
 // GitHub Actions recreates that file from the selected Environment secret.
 // Never put keys directly in tracked TypeScript source.
 export const supabaseConfig = {

@@ -1,9 +1,9 @@
 import { writeFileSync, unlinkSync } from "node:fs";
-import { files, parseConfig } from "./environment.mjs";
+import { configFile, files, parseConfig } from "./environment.mjs";
 const [action, mode] = process.argv.slice(2);
 try {
   if (!files[mode]) throw new Error("Environment must be dev or prod.");
-  const target = new URL(`../${files[mode]}`, import.meta.url);
+  const target = configFile(new URL("../", import.meta.url), mode);
   if (action === "clean") {
     try {
       unlinkSync(target);

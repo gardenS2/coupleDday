@@ -6,6 +6,7 @@
 .env
 .env.*
 !.env.*.example
+.evn*
 *.keystore
 *.jks
 *.p8
@@ -13,6 +14,10 @@
 *.pem
 *.key
 *.mobileprovision
+
+# Local app signing keys and certificates
+/config/keys/*
+!/config/keys/README.md
 
 # Dependencies and generated build output
 **/node_modules/
@@ -23,6 +28,19 @@
 **/.gradle/
 **/.cxx/
 **/*.tsbuildinfo
+**/expo-env.d.ts
+**/web-build/
+**/.metro-health-check*
+*.orig.*
+
+# Expo-generated native projects (the app uses Continuous Native Generation)
+/apps/mobile/android/
+/apps/mobile/ios/
+/spikes/widget-poc/android/
+/spikes/widget-poc/ios/
+/spikes/widget-poc/dist-android/
+/spikes/widget-poc/dist-ios/
+/spikes/widget-poc/app-example/
 
 # Local Supabase/Docker state, logs and private design references
 **/supabase/.temp/

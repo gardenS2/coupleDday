@@ -1,6 +1,10 @@
 import { parseEnv } from "node:util";
 import { readFileSync } from "node:fs";
 export const files = { dev: ".env.dev", prod: ".env.prod" };
+export function configFile(root, mode) {
+  if (!files[mode]) throw new Error("Environment must be dev or prod.");
+  return new URL(`../../config/env/${files[mode]}`, root);
+}
 const allowed = [
   "EXPO_PUBLIC_SUPABASE_URL",
   "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
@@ -58,9 +62,11 @@ export function loadConfig(root, mode, options) {
   if (!files[mode]) throw new Error("Environment must be dev or prod.");
   let text;
   try {
-    text = readFileSync(new URL(files[mode], root), "utf8");
+    text = readFileSync(configFile(root, mode), "utf8");
   } catch {
-    throw new Error(`Create ${files[mode]} from its .example file first.`);
+    throw new Error(
+      `Create config/env/${files[mode]} from its .example file first.`,
+    );
   }
   return parseConfig(text, mode, options);
 }

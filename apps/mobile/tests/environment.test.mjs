@@ -99,31 +99,36 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 function fixture(t) {
-  const root = mkdtempSync(join(tmpdir(), "couple-env-test-"));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  mkdirSync(join(root, "scripts"));
+  const repoRoot = mkdtempSync(join(tmpdir(), "couple-env-test-"));
+  const appRoot = join(repoRoot, "apps/mobile");
+  t.after(() => rmSync(repoRoot, { recursive: true, force: true }));
+  mkdirSync(join(appRoot, "scripts"), { recursive: true });
+  mkdirSync(join(appRoot, "node_modules/expo/bin"), { recursive: true });
+  mkdirSync(join(repoRoot, "config/env"), { recursive: true });
   for (const name of ["environment.mjs", "expo-env.mjs", "ci-env.mjs"])
     copyFileSync(
       new URL(`../scripts/${name}`, import.meta.url),
-      join(root, "scripts", name),
+      join(appRoot, "scripts", name),
     );
-  return root;
+  return { appRoot, repoRoot };
 }
 test("runner selects exact file and prevents old dotenv values reaching Expo", (t) => {
-  const root = fixture(t);
-  mkdirSync(join(root, "node_modules/expo/bin"), { recursive: true });
-  writeFileSync(join(root, ".env.dev"), settings("http://127.0.0.1:55431"));
+  const { appRoot, repoRoot } = fixture(t);
   writeFileSync(
-    join(root, ".env.local"),
+    join(repoRoot, "config/env/.env.dev"),
+    settings("http://127.0.0.1:55431"),
+  );
+  writeFileSync(
+    join(appRoot, ".env.local"),
     settings("https://wrong.supabase.co"),
   );
   writeFileSync(
-    join(root, "node_modules/expo/bin/cli"),
+    join(appRoot, "node_modules/expo/bin/cli"),
     `require('node:fs').writeFileSync('observed.json', JSON.stringify({url:process.env.EXPO_PUBLIC_SUPABASE_URL,disable:process.env.EXPO_NO_DOTENV,args:process.argv.slice(2)}));`,
   );
   const result = spawnSync(
     process.execPath,
-    [join(root, "scripts/expo-env.mjs"), "dev", "android"],
+    [join(appRoot, "scripts/expo-env.mjs"), "dev", "android"],
     {
       encoding: "utf8",
       env: {
@@ -133,14 +138,14 @@ test("runner selects exact file and prevents old dotenv values reaching Expo", (
     },
   );
   assert.equal(result.status, 0, result.stderr);
-  const observed = JSON.parse(readFileSync(join(root, "observed.json")));
+  const observed = JSON.parse(readFileSync(join(appRoot, "observed.json")));
   assert.equal(observed.url, "http://10.0.2.2:55431");
   assert.equal(observed.disable, "1");
   assert.deepEqual(observed.args, ["run:android", "--port", "8082"]);
 });
 test("CI secret materialization refuses overwrite, does not log key, and cleans file", (t) => {
-  const root = fixture(t);
-  const path = join(root, "scripts/ci-env.mjs");
+  const { appRoot, repoRoot } = fixture(t);
+  const path = join(appRoot, "scripts/ci-env.mjs");
   const run = (action) =>
     spawnSync(process.execPath, [path, action, "prod"], {
       encoding: "utf8",
@@ -152,8 +157,8 @@ test("CI secret materialization refuses overwrite, does not log key, and cleans 
   const result = run("write");
   assert.equal(result.status, 0, result.stderr);
   assert.ok(!result.stdout.includes("sb_publishable_test_fixture"));
-  assert.ok(existsSync(join(root, ".env.prod")));
+  assert.ok(existsSync(join(repoRoot, "config/env/.env.prod")));
   assert.notEqual(run("write").status, 0);
   assert.equal(run("clean").status, 0);
-  assert.ok(!existsSync(join(root, ".env.prod")));
+  assert.ok(!existsSync(join(repoRoot, "config/env/.env.prod")));
 });

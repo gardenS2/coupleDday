@@ -27,11 +27,11 @@ export PATH="$ANDROID_HOME/platform-tools:$PATH"
 
 | 명령 (`apps/mobile`에서 실행) | 설정 파일 | 동작 |
 |---|---|---|
-| `npm run android:dev` | `.env.dev` | Android 개발 빌드 및 실행, Metro 8082 |
-| `npm run ios:dev` | `.env.dev` | iOS 개발 빌드 및 실행, Metro 8082 |
-| `npm run start:dev` | `.env.dev` | 개발 JS 서버만 시작, 캐시 초기화 |
-| `npm run android:prod` | `.env.prod` | Android release 변형 로컬 실행 |
-| `npm run ios:prod` | `.env.prod` | iOS Release 구성 로컬 실행 |
+| `npm run android:dev` | `config/env/.env.dev` | Android 개발 빌드 및 실행, Metro 8082 |
+| `npm run ios:dev` | `config/env/.env.dev` | iOS 개발 빌드 및 실행, Metro 8082 |
+| `npm run start:dev` | `config/env/.env.dev` | 개발 JS 서버만 시작, 캐시 초기화 |
+| `npm run android:prod` | `config/env/.env.prod` | Android release 변형 로컬 실행 |
+| `npm run ios:prod` | `config/env/.env.prod` | iOS Release 구성 로컬 실행 |
 | `npm run export:dev` / `npm run export:prod` | 해당 파일 | Android/iOS/web JS 번들 검사, `dist/` 생성 |
 | `npm run test:env` | 실제 키 불필요 | 설정 격리·검증·CI 임시 파일 테스트 |
 | `npm run typecheck` / `npm run lint` | 실제 키 불필요 | 타입 및 코드 검사 |
@@ -49,11 +49,11 @@ npm run android:dev
 
 ## 2. 환경 파일
 
-개발은 **`.env.dev`**, 운영은 **`.env.prod`**. 둘 다 `apps/mobile/`에 있습니다. 실제 파일은 Git 제외, `.example` 파일만 공유합니다. 신규 체크아웃에서는 다음처럼 복사합니다. 기존 파일이 있을 때는 덮어쓰지 마세요.
+개발은 **`config/env/.env.dev`**, 운영은 **`config/env/.env.prod`**입니다. 환경파일과 키 관련 파일을 저장소 루트의 `config/` 아래에 모읍니다. 실제 환경 파일과 `config/keys/` 안의 자격증명 파일은 루트 `.gitignore`에서 제외하며 `.example`과 설명 문서만 공유합니다. 신규 체크아웃에서는 저장소 루트에서 복사합니다. 기존 파일이 있으면 덮어쓰지 마세요.
 
 ```sh
-cp -n .env.dev.example .env.dev
-cp -n .env.prod.example .env.prod
+cp -n config/env/.env.dev.example config/env/.env.dev
+cp -n config/env/.env.prod.example config/env/.env.prod
 ```
 
 두 파일의 형식:
@@ -76,8 +76,8 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 | GitHub Environment | Secret 이름 | 넣을 내용 |
 |---|---|---|
-| development | MOBILE_ENV_FILE | 클라우드 개발 Supabase용 `.env.dev` 파일 전체 내용 |
-| production | MOBILE_ENV_FILE | `.env.prod` 파일 전체 내용 |
+| development | MOBILE_ENV_FILE | 클라우드 개발 Supabase용 `config/env/.env.dev` 파일 전체 내용 |
+| production | MOBILE_ENV_FILE | `config/env/.env.prod` 파일 전체 내용 |
 
 GitHub runner에는 개발자 Mac의 Docker가 없으므로 development Secret에 `localhost` 주소를 넣어 원격 DB 연결 테스트를 기대하면 안 됩니다. 이 워크플로는 DB 접속 없이 번들 생성만 검사합니다. 실제 원격 동작에는 클라우드 개발 프로젝트 URL을 사용합니다.
 
@@ -86,13 +86,13 @@ GitHub runner에는 개발자 Mac의 Docker가 없으므로 development Secret�
 GitHub CLI를 쓰는 경우 실제 저장소명을 지정한 다음 로컬 파일에서 직접 등록할 수 있습니다. 아래는 사용자가 실행할 예시이며 아직 실행하지 않았습니다.
 
 ```sh
-gh secret set MOBILE_ENV_FILE --repo gardenS2/coupleDday --env development < apps/mobile/.env.dev
-gh secret set MOBILE_ENV_FILE --repo gardenS2/coupleDday --env production < apps/mobile/.env.prod
+gh secret set MOBILE_ENV_FILE --repo gardenS2/coupleDday --env development < config/env/.env.dev
+gh secret set MOBILE_ENV_FILE --repo gardenS2/coupleDday --env production < config/env/.env.prod
 ```
 
 GitHub Secrets는 등록 후 원문을 다운로드하는 저장소가 아닙니다. 로컬 실행에는 로컬 파일을 별도로 가지고 있어야 합니다. 파일이 과거에 이미 커밋됐다면 ignore만으로 기록이 지워지지 않습니다. 추적 여부를 확인하고 필요하면 추적 해제와 키 교체를 수행하세요.
 
-**비공개 디자인 이미지:** 참고 스크린샷은 `docs/references/private/`에 보관하며 루트 `.gitignore`에서 제외합니다. 이미지는 로컬 전용으로 유지하고 원격 저장소에 추가하지 마세요. 앱 환경 파일 및 생성물도 루트와 `apps/mobile/.gitignore` 규칙으로 제외됩니다.
+**비공개 파일:** 참고 스크린샷은 `docs/references/private/`에, 로컬 서명 자격증명은 `config/keys/`에 보관할 수 있습니다. 저장소 루트의 `.gitignore` 하나에서 비공개 파일과 앱/DB 캐시를 제외합니다. 실제 비밀키는 GitHub Secrets 또는 EAS에 보관하고 원격 저장소에 추가하지 마세요.
 
 ## 4. Docker는 언제 필요한가?
 
@@ -114,7 +114,7 @@ npm test
 npm run lint:db
 ```
 
-`npm run env:mobile`은 로컬 공개 키만 골라 `apps/mobile/.env.dev`에 기록합니다. 관리자 키를 출력하지 않으며, 기존 파일에 값이 있으면 덮어쓰지 않고 중단합니다. 기존 클라우드 개발 설정은 따로 보관하고 값이 비어 있는 개발 파일에서 실행하세요. 로컬 Supabase가 실행 중이어야 하며 CLI가 `PUBLISHABLE_KEY`를 제공해야 합니다.
+`npm run env:mobile`은 로컬 공개 키만 골라 `config/env/.env.dev`에 기록합니다. 관리자 키를 출력하지 않으며, 기존 파일에 값이 있으면 덮어쓰지 않고 중단합니다. 기존 클라우드 개발 설정은 따로 보관하고 값이 비어 있는 개발 파일에서 실행하세요. 로컬 Supabase가 실행 중이어야 하며 CLI가 `PUBLISHABLE_KEY`를 제공해야 합니다.
 
 이후 다른 터미널에서 `apps/mobile`로 이동해 `npm run ios:dev` 또는 `npm run android:dev`를 실행합니다. 로컬 API는 `http://127.0.0.1:55431`, DB는 `127.0.0.1:55432`입니다. Android 에뮬레이터에서는 실행 스크립트가 API URL을 `http://10.0.2.2:55431`로 바꿉니다. Android 실기기의 localhost는 휴대전화 자체이므로 이 로컬 구성 대신 클라우드 개발 DB를 사용하세요. 단순히 Mac의 LAN IP로 변경하는 것은 지원하지 않습니다.
 
@@ -171,7 +171,7 @@ npm run stop
 
 ## 7. 클라우드 개발 DB 초기 적용 (2026-11-05)
 
-개발 설정 파일은 `apps/mobile/.env.dev`로 통일했습니다. 기존 로컬 파일을 이름만 변경하여 URL과 키를 보존했습니다. 실행 스크립트, 테스트, 예제, CI 파일 생성 및 문서도 새 이름을 사용합니다. GitHub의 `MOBILE_ENV_FILE` Secret 이름과 내용 형식은 그대로입니다. 실행 중인 개발 서버는 종료 후 `npm run start:dev`로 재시작하세요.
+개발 설정 파일은 저장소 루트 `config/env/.env.dev`에 둡니다. 실행 스크립트와 CI는 이 중앙 경로를 사용하고, URL과 공개 키 설정 형식 및 GitHub `MOBILE_ENV_FILE` Secret은 그대로입니다. 실행 중인 개발 서버는 종료 후 `npm run start:dev`로 재시작하세요.
 
 앱 로그인은 Supabase의 `auth` 스키마를 사용합니다. 로그인 성공이 앱 테이블 설치를 의미하지는 않습니다. 앱 테이블은 같은 프로젝트의 `public`, 내부 권한 검사 함수는 `private` 스키마에 설치합니다.
 

@@ -18,4 +18,4 @@ npx expo run:android
 
 고정 모드는 2026-10-26, 시작일 2026-01-01, 가상 인물 하늘·바다, 해당 월 5/15/25일 가상 약속을 사용한다. 기대 D+는 299, 가상 기념일까지 D-36이다. 실제 시각 모드는 오늘의 서울 날짜와 iOS의 다음 7일 자정 타임라인을 생성한다. Android는 snapshot만 갱신하며 자정 백그라운드 갱신은 구현하지 않았다.
 
-`src/snapshot.ts`는 순수 날짜 계산·비민감 스냅샷, `widgets/*.ios.tsx`/`*.android.tsx`는 OS별 렌더링, `App.tsx`는 수동 검증 화면이다. 일반 `.tsx` 재수출 파일은 TypeScript 해석용이며 Metro가 OS 접미사 파일을 선택한다. `.gitignore`에 로컬 빌드/캐시/비밀 파일을 제외한다. 앱 서명 키·계정·운영 DB 연결은 추가하지 않는다.
+`src/snapshot.ts`는 순수 날짜 계산·비민감 스냅샷, `widgets/*.ios.tsx`/`*.android.tsx`는 OS별 렌더링, `App.tsx`는 수동 검증 화면이다. 일반 `.tsx` 재수출 파일은 TypeScript 해석용이며 Metro가 OS 접미사 파일을 선택한다. 프로젝트 루트 `.gitignore`에서 로컬 빌드/캐시/비밀 파일을 제외한다. 앱 서명 키·계정·운영 DB 연결은 추가하지 않는다.

@@ -25,7 +25,8 @@ if (command==='mobile-env') {
     const status=JSON.parse(execFileSync('./node_modules/.bin/supabase',['status','-o','json'],{env,encoding:'utf8',stdio:['ignore','pipe','pipe']}));
     const url=new URL(status.API_URL);
     if(!['127.0.0.1','localhost'].includes(url.hostname)||url.port!=='55431'||!status.PUBLISHABLE_KEY?.startsWith('sb_publishable_')) throw Error('Local config unavailable');
-    const target=path.resolve(root,'../../apps/mobile/.env.dev');
+    const target=path.resolve(root,'../../config/env/.env.dev');
+    mkdirSync(path.dirname(target),{recursive:true,mode:0o700});
     let current={};try{current=parseEnv(readFileSync(target,'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
     if(Object.values(current).some(value=>value.trim())) {
       console.error('The mobile development file already has values. Clear it deliberately before generating local settings.');process.exit(1);
