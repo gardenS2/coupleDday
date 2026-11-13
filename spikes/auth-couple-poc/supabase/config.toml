@@ -4,6 +4,17 @@
 # working directory name when running `supabase init`.
 project_id = "couple-auth-local"
 
+[functions.google-calendar-oauth-start]
+verify_jwt = true
+
+[functions.google-calendar-oauth-callback]
+# Google redirects directly to this callback. The function validates and consumes
+# a one-time server-side OAuth state before exchanging the code.
+verify_jwt = false
+
+[functions.google-calendar-oauth-disconnect]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.

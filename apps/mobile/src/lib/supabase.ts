@@ -89,6 +89,7 @@ export const supabase = configured
   ? createClient(url, key, {
       auth: {
         storage,
+        flowType: "pkce",
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,

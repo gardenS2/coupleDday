@@ -216,7 +216,7 @@ Git 커밋:
 
 ### GC-01. DB·매핑·동기화 상태 적용 및 검증
 
-> **실행 상태 (2026-11-13):** 승인 후 개발 연결 프로젝트 `gllplnwnacjcujeaeuei`에 GC-01 migration과 승인자 토큰 철회 보완 migration을 적용했다. 기본 테이블/RLS 카탈로그 검사와 커플 connection 격리·클라이언트 권한 검증은 통과했다. 전체 트리거/DML 시나리오 자동 검증은 테스트 쿼리의 제한 열 접근 오류로 완료되지 않아 미검증으로 남긴다. 자세한 내역은 `docs/google-calendar-sync-deployment.md` 참조. Google OAuth·API·Worker·양방향 동기화는 미구현이며, GC-02는 별도 진행한다.
+> **실행 상태 (2026-11-13):** 개발 연결 프로젝트 `gllplnwnacjcujeaeuei`에 GC-01 적용 및 RLS 검사가 완료됐다. 후속 GC-01 잔여 rollback DML 검증 16/16도 통과했다. `couple_events` 삭제와 recovery/outbox 원자적 연동은 아직 미구현이므로 Google 일정 삭제 전파는 금지한다. Google OAuth·실제 일정 동기화는 별도 단계다. 자세한 내역은 `docs/google-calendar-sync-deployment.md` 참조.
 
 - **선행:** GC-00 확인, 스키마 승인.
 - **범위:** Event ID 매핑, 서버 전용 credential, outbox, etag, last synced version, tombstone, lock 및 RLS migration을 검토·적용하고 원격 검증한다.
@@ -230,6 +230,8 @@ Git 커밋:
 ```
 
 ### GC-02. 각자 Google 계정 연결 및 OAuth
+
+> **실행 상태 (2026-11-13):** GC-01 잔여 DML 16/16과 GC-02 원격 rollback DML 9/9 통과. 기존 Supabase Google Identity linking UI 외에 Calendar 별도 OAuth용 Edge Function 소스, server-side PKCE/state, AES-GCM token 저장·refresh rotation helper, revoke/disconnect fencing을 구현했다. Migrations `20261113000300`~`20261113000500`을 원격 개발 프로젝트에 적용했고 local/remote 12개 이력을 확인했다. Google Cloud/Supabase secrets 미등록 및 Functions 미배포로 실제 Google OAuth와 Android/iOS 실기기 테스트는 미실행이다. 모바일 typecheck/lint와 Edge Function strict TypeScript·구문 검사는 통과했으며 Deno 런타임 검증은 미실행이다. 상세 설정은 `docs/google-calendar-oauth-setup.md`; GC-03은 시작하지 않는다.
 
 - **선행:** GC-01 승인된 기반.
 - **범위:** 현재 Supabase 로그인 사용자 유지 + Google identity 연결, Calendar OAuth 별도 동의, 갱신/철회; 기존 세션 보존.

@@ -28,9 +28,10 @@
 - **원격 적용:** 앱 `.env.dev` project ref와 대시보드 ref가 `gllplnwnacjcujeaeuei`로 일치했다. SQL Editor로 두 GC-01 migration을 적용했다. 대시보드 project badge는 `main PRODUCTION`으로 표시되어 있어, 사용자가 밝힌 테스트 전용 상태와 표기가 다르다는 환경 위험을 남긴다.
 - **migration 이력:** 원격에 기존 migration history가 없어, 기존 7개 migration의 버전/이름 메타데이터만 등록하고 SQL은 재실행하지 않았다. GC-01 버전 두 개도 기록됐다. 이 이력 복원 방식과 대상 버전은 별도 deployment log에 적었다.
 - **성공:** 원격 카탈로그에서 GC-01 테이블 7개, RLS 활성 테이블 7개, 제약조건 63개, 사용자 트리거 11개 및 두 GC-01 migration history를 확인했다. rollback 트랜잭션의 RLS 권한 검사는 커플 멤버 connection 허용, 타 커플 차단, credentials/mapping/outbox/sync-state 클라이언트 차단, conflict/recovery 스냅샷 열 차단, anon 차단 7개 모두 `true`였다.
-- **실패/재검증:** 첫 넓은 DML 검증 쿼리는 제한된 conflict 열(`connection_id`)을 조회해 `42501 permission denied`로 끝났다. 이는 의도된 열 권한 경계를 반영한 테스트 쿼리 오류다. 그 트랜잭션은 rollback 후, 수정된 RLS 검사 7/7을 통과했다.
-- **미검증:** owner A→B/NULL 토큰 폐기, mapping/outbox/conflict 중복 제약, event 커플 이동 차단, 이벤트 hard delete FK/recovery 보존 등 DML·trigger 동작별 assert 결과는 확정하지 못했다. Supabase CLI dry-run 및 migration runner 적용도 CLI 인증이 되지 않아 사용하지 않았다. RLS 재검증 SQL은 `spikes/auth-couple-poc/supabase/drafts/GC-01-remote-rls-verification.sql`에 보관했다.
-- **기존 DB 회귀:** 기존 `couple_events` 데이터와 RLS를 읽기 전용으로 확인했으나, 별도 CRUD 쓰기 회귀는 수행하지 않았다. 테스트 쿼리의 DML 흐름은 최종 결과를 반환하지 못해 성공으로 집계하지 않는다.
+- **DML·trigger 검증 성공:** 재인증 후 Supabase CLI 2.122.0으로 연결된 프로젝트에서 `spikes/auth-couple-poc/supabase/drafts/GC-01-dml-verification.sql`을 실행했다. 커플 소유권, A→B/NULL 승인자 변경, `revocation_pending`→`revoked` 토큰 제거, 중복 mapping/open conflict/outbox 차단, 안전 snapshot, event/connection hard-delete 이후 recovery 보존, watch metadata 등 16/16 assertions가 통과했다.
+- **기존 DB 회귀:** 합성 `couple_events` 행에 대한 INSERT/UPDATE/DELETE와 version 증가가 성공했다. 기존 데이터는 수정하지 않았다.
+- **rollback 확인:** DML 테스트 전체는 마지막에 rollback했다. 사후 read-only 조회에서 테스트 이벤트·연결·복구 행이 각각 0개였다. RLS 7개 검사는 이번에 반복하지 않았다.
+- **migration 이력:** `migration list --linked --workdir spikes/auth-couple-poc`에서 로컬·원격 migration 9개가 모두 일치했다. 처음에는 새 CLI 3.1.0이 프로필을 못 읽었으나, 프로젝트 기존 CLI 2.122.0의 브라우저 인증으로 연결을 정상화했다.
 - **적용 판단:** schema migration은 적용 완료다. 그러나 이 결과만으로 동기화 기능을 켤 수 없다. 삭제 snapshot/Outbox 원자성, Worker와 credential revoke/fencing을 구현·검증하기 전 Google 일정 삭제 전파는 금지한다.
 
 ## GC-02 전 잔여 결정

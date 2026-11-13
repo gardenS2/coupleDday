@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { AppState } from "react-native";
+import * as Linking from "expo-linking";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, db } from "./supabase";
 export type Couple = { id: string; relationship_start: string };
@@ -25,6 +26,9 @@ type State = {
   saveMyName: (name: string) => Promise<void>;
   saveRelationshipStart: (date: string) => Promise<void>;
   logout: () => Promise<void>;
+  googleAuthNotice: string;
+  linkGoogleIdentity: () => Promise<void>;
+  unlinkGoogleIdentity: () => Promise<void>;
 };
 const Auth = createContext<State>(null!);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,9 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [eventsRevision, setEventsRevision] = useState(0),
     [count, setCount] = useState(0),
     [loading, setLoading] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [googleAuthNotice, setGoogleAuthNotice] = useState("");
   const current = useRef(session);
   const generation = useRef(0);
+  const handledAuthCodes = useRef(new Set<string>());
   const invalidateEvents = useCallback(() => {
     setEventsRevision((revision) => revision + 1);
   }, []);
@@ -103,8 +109,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     if (!supabase) return;
+    const client = supabase;
     let alive = true,
       changed = false;
+    const completeAuthCallback = async (url: string) => {
+      if (!url.startsWith("coupledday://auth/callback")) return;
+      const params = Linking.parse(url).queryParams ?? {};
+      if (params.error || params.error_description) {
+        setGoogleAuthNotice(
+          "Google 연결을 취소했거나 완료하지 못했어요. 다시 시도할 수 있어요.",
+        );
+        return;
+      }
+      const code = params.code;
+      if (typeof code !== "string" || handledAuthCodes.current.has(code))
+        return;
+      handledAuthCodes.current.add(code);
+      if (handledAuthCodes.current.size > 8) {
+        const oldest = handledAuthCodes.current.values().next().value;
+        if (oldest) handledAuthCodes.current.delete(oldest);
+      }
+      try {
+        const result = await client.auth.exchangeCodeForSession(code);
+        if (result.error) {
+          setGoogleAuthNotice(
+            "인증 응답을 확인하지 못했어요. 만료된 연결일 수 있어 다시 시도해 주세요.",
+          );
+          return;
+        }
+      } catch {
+        setGoogleAuthNotice(
+          "인증을 완료하지 못했어요. 연결을 다시 시도해 주세요.",
+        );
+        return;
+      }
+      setGoogleAuthNotice("인증을 완료했어요.");
+      await refresh();
+    };
     const receive = (next: Session | null) => {
       current.current = next;
       setSession(next);
@@ -120,6 +161,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         receive(next);
       }
     });
+    const linkSubscription = Linking.addEventListener("url", ({ url }) => {
+      if (alive) void completeAuthCallback(url);
+    });
+    void Linking.getInitialURL().then((url) => {
+      if (alive && url) void completeAuthCallback(url);
+    }).catch(() => undefined);
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
@@ -144,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
       data.subscription.unsubscribe();
+      linkSubscription.remove();
       sub.remove();
       supabase?.auth.stopAutoRefresh();
     };
@@ -157,6 +205,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.error) throw result.error;
     setSession(null);
   }
+  const linkGoogleIdentity = useCallback(async () => {
+    if (!supabase || !current.current?.user)
+      throw new Error("Google 계정을 연결하려면 먼저 로그인해 주세요.");
+    if (current.current.user.identities?.some((identity) => identity.provider === "google"))
+      throw new Error("이미 Google 계정이 연결되어 있어요.");
+    setGoogleAuthNotice("");
+    const redirectTo = Linking.createURL("auth/callback", {
+      scheme: "coupledday",
+    });
+    const { data, error } = await supabase.auth.linkIdentity({
+      provider: "google",
+      options: {
+        redirectTo,
+        scopes: "openid email profile",
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error) throw error;
+    if (!data.url) throw new Error("Google 연결 주소를 만들지 못했어요.");
+    await Linking.openURL(data.url);
+    setGoogleAuthNotice(
+      "시스템 브라우저에서 Google 연결을 완료하거나 취소한 뒤 앱으로 돌아와 주세요.",
+    );
+  }, []);
+  const unlinkGoogleIdentity = useCallback(async () => {
+    if (!supabase || !current.current?.user)
+      throw new Error("로그인이 필요해요.");
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    const identities = data.user.identities ?? [];
+    const googleIdentity = identities.find(
+      (identity) => identity.provider === "google",
+    );
+    if (!googleIdentity) throw new Error("연결된 Google 계정이 없어요.");
+    if (!identities.some((identity) => identity.provider === "email"))
+      throw new Error("이메일 로그인 수단을 먼저 확인한 뒤 연결을 해제해 주세요.");
+    const result = await supabase.auth.unlinkIdentity(googleIdentity);
+    if (result.error) throw result.error;
+    const updatedUser = await supabase.auth.getUser();
+    if (updatedUser.error) throw updatedUser.error;
+    const storedSession = await supabase.auth.getSession();
+    if (storedSession.data.session) {
+      const nextSession = {
+        ...storedSession.data.session,
+        user: updatedUser.data.user,
+      };
+      current.current = nextSession;
+      setSession(nextSession);
+    }
+    setGoogleAuthNotice("Google 로그인 연결을 해제했어요. 앱 계정은 유지돼요.");
+  }, []);
   const saveMyName = useCallback(async (name: string) => {
     const user = current.current?.user.id;
     if (!supabase || !user) throw new Error("로그인이 필요해요.");
@@ -196,6 +295,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         saveMyName,
         saveRelationshipStart,
         logout,
+        googleAuthNotice,
+        linkGoogleIdentity,
+        unlinkGoogleIdentity,
       }}
     >
       {children}

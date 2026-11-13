@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { router } from "expo-router";
+import * as Linking from "expo-linking";
 import {
   Brand,
   Screen,
@@ -27,7 +28,15 @@ export default function Login() {
     try {
       const auth = db().auth;
       const result = signup
-        ? await auth.signUp({ email: email.trim(), password })
+        ? await auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              emailRedirectTo: Linking.createURL("auth/callback", {
+                scheme: "coupledday",
+              }),
+            },
+          })
         : await auth.signInWithPassword({ email: email.trim(), password });
       if (result.error) throw result.error;
       if (signup && !result.data.session)

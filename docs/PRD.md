@@ -382,6 +382,8 @@
 
 ### 15.2 계정·권한·토큰 설계
 
+**GC-02 구현 상태 (2026-11-13):** 기존 Supabase user ID를 유지하는 Google Identity 연결/해제 UI와, 별도 Calendar OAuth를 위한 PKCE·일회용 state Edge Function 소스를 추가했다. GC-02 migration `20261113000300`~`20261113000500`을 원격 프로젝트에 적용하고 로컬·원격 migration 12개 일치를 확인했다. 원격 rollback DML 9/9 및 GC-01 잔여 DML 16/16 검사를 통과했다. Refresh token은 서버에서 AES-256-GCM으로 암호화하도록 구현했으며 클라이언트에 반환하지 않는다. Google Cloud/Supabase secrets 등록과 함수 배포, 실제 OAuth/Android/iOS 테스트는 미완료이므로 실사용 연결은 아직 불가능하다. Edge Function TypeScript 검사와 구문 검사만 통과했고 Deno 런타임 실행은 미검증이다. 상세 상태와 수동 설정은 `docs/google-calendar-oauth-setup.md` 참조.
+
 1. 각자 본인의 Google 계정 사용. 비밀번호 공유 금지. 공유 캘린더 소유자가 편집 권한으로 상대를 초대한다.
 2. Supabase 세션과 커플 ID를 그대로 유지. 기존 사용자에 Google 로그인 추가 시 Supabase **Identity Linking** 또는 현재 코드와 일관된 안전한 연결 방법을 사용하고 새 user ID 생성으로 기존 데이터를 분리하지 않는다.
 3. Google **로그인 토큰 ≠ Calendar API 장기 접근 권한**. Calendar 동의 범위는 `calendar.calendarlist.readonly`와 `calendar.events` 등 필요한 최소 scope를 검토한다. API 접근을 연결 해제/철회할 수 있어야 한다.
@@ -392,7 +394,7 @@
 
 ### 15.3 동기화 아키텍처·데이터 매핑
 
-**GC-01 기반 상태 (2026-11-13):** 원격 DB에 GC-01의 7개 테이블과 제약조건/RLS가 적용됐다. 이는 동기화 기반 스키마만 준비한 상태이며 Google OAuth, Google Calendar API, Edge Function/Worker, webhook 및 실제 일정 동기화는 구현되지 않았다. 아래 흐름은 후속 구현 설계다.
+**GC-01/02 기반 상태 (2026-11-13):** 원격 DB에 GC-01의 7개 테이블과 GC-02 OAuth session/token 저장 구조가 적용됐다. Google OAuth 연결용 앱 UI와 Edge Function 소스는 구현됐으나 Google Cloud 설정과 함수 배포가 없어 아직 실제로 사용할 수 없다. Calendar API 일정 읽기/쓰기, 캘린더 선택, Worker, webhook 및 실제 일정 동기화는 미구현이다. 아래 흐름은 후속 구현 설계다.
 
 - **앱 발신:** 앱 저장 요청 → Supabase Event 트랜잭션/버전 증가 → 동기화 outbox 생성 → 승인된 서버 워커가 Google 이벤트 생성/패치/삭제 → `google_event_id`, `etag`, 마지막 동기화 시점 기록.
 - **Google 발신:** Google `events.watch` HTTPS webhook → 인증된 채널 헤더 검증 → **내용 없는 변경 신호**를 큐에 적재 → 서버에서 `events.list` + `syncToken` 조회 → 기존 매핑 기준으로 앱 Event 반영.
@@ -414,8 +416,9 @@
 | `google_calendar_outbox` | operation_id, event_key, source_version, operation, snapshot, retry state | 재시도 가능한 서버 전용 변경 큐 |
 | `google_calendar_conflicts` | app/Google/base snapshots, versions, ETag, resolution state | 충돌 이력; 멤버는 허용 열만 SELECT |
 | `google_calendar_recovery_records` | historical connection/event key, deletion source, snapshot, 30-day expiry | 연결 삭제 후에도 유지되는 복구 기록; 민감 JSON은 클라이언트 차단 |
+| `google_calendar_oauth_sessions` (GC-02) | one-time state hash, short-lived PKCE verifier, connection/user/authorization epoch, expiry | RLS 활성; anon/authenticated 전면 차단, Edge Function만 사용 |
 
-정식 migration은 `spikes/auth-couple-poc/supabase/migrations/20261113000100_google_calendar_sync.sql`이며, 승인자 변경 후 이전 토큰 폐기 완료를 허용하는 보완 migration은 `20261113000200_google_calendar_revocation_finalize.sql`이다. 실제 적용 기록과 검증 범위는 `docs/google-calendar-sync-deployment.md`에 정리한다. 이 스키마는 동기화 실행을 활성화하지 않는다.
+정식 GC-01 migration은 `spikes/auth-couple-poc/supabase/migrations/20261113000100_google_calendar_sync.sql` 및 `20261113000200_google_calendar_revocation_finalize.sql`이다. GC-02는 `20261113000300_google_calendar_oauth_sessions.sql`, `20261113000400_google_calendar_disconnect_fencing.sql`, `20261113000500_gc02_disconnect_rpc_fix.sql`에서 일회용 OAuth state, server-only token RPC, disconnect fencing을 추가했다. 실제 적용 기록과 검증 범위는 `docs/google-calendar-sync-deployment.md` 및 `docs/google-calendar-oauth-setup.md`에 정리한다. 이 스키마는 일정 동기화 실행을 활성화하지 않는다.
 
 ### 15.4 충돌 해결 정책 (승인된 기본값)
 
@@ -467,7 +470,7 @@
 
 ### 15.8 단계 순서 / 권한 / 운영 결정
 
-`docs/CODEX_TASK.md`의 GC-00~GC-11를 **기존 작업과 별도 티켓**으로 진행한다. 06·07·EVT-RANGE-01의 현재 구현을 먼저 감사하고 재사용한다. 각 티켓은 구현 → 관련 테스트 → 사용자 확인 → 다음 단계 순서이다. GC-01 DB 기반은 원격 적용됐으나 OAuth·Worker·webhook·양방향 동기화는 미구현이다. `couple_events` 삭제와 recovery/outbox의 같은 트랜잭션 원자성이 구현·검증되기 전까지 Google 일정 삭제 전파를 금지한다. Google Cloud 프로젝트 구성·OAuth 동의 화면·실제 캘린더 연결·삭제/복원 실행은 명시적으로 승인된 범위에서만 수행한다.
+`docs/CODEX_TASK.md`의 GC-00~GC-11를 **기존 작업과 별도 티켓**으로 진행한다. 06·07·EVT-RANGE-01의 현재 구현을 먼저 감사하고 재사용한다. 각 티켓은 구현 → 관련 테스트 → 사용자 확인 → 다음 단계 순서이다. GC-02 OAuth 소스와 DB 기반은 준비됐지만 Google Cloud 설정·함수 배포·실제 연결 시험이 남아 있다. 캘린더 선택·Worker·webhook·양방향 일정 동기화는 미구현이다. `couple_events` 삭제와 recovery/outbox의 같은 트랜잭션 원자성이 구현·검증되기 전까지 Google 일정 삭제 전파를 금지한다. Google Cloud 프로젝트 구성·OAuth 동의 화면·실제 캘린더 연결·삭제/복원 실행은 명시적으로 승인된 범위에서만 수행한다.
 
 **공식 기술 근거(2026-11-11 확인):**
 - Google Calendar syncToken/410: https://developers.google.com/workspace/calendar/api/guides/sync
