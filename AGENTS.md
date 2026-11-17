@@ -1,6 +1,7 @@
 # 프로젝트 기본 정보
 
 - 이 프로젝트는 React Native + Expo 기반의 Android/iOS 커플앱이다.
+- 출시 브랜딩: `두데이 (2DAY)` · Expo slug `cpldday` · Android/iOS ID `com.cpldday.app` · URL scheme `coupledday`.
 - 기존 Android 앱의 기능과 디자인을 최대한 유지하면서 iOS를 지원한다.
 - 기존 데이터, 화면 이동, 저장 기능 및 다크모드 디자인을 유지한다.
 - 플랫폼별 차이가 필요한 경우를 제외하고 Android와 iOS의 UI를 일관되게 구현한다.

@@ -98,7 +98,7 @@ export default function Login() {
         />
         <Notice text={message} />
         <Button
-          title={signup ? "우리의 공간 시작하기" : "다시, 우리에게"}
+          title={signup ? "우리의 공간 시작하기" : "로그인하기"}
           busy={busy}
           disabled={!configured || !email.includes("@") || password.length < 8}
           onPress={() => void submit()}

@@ -31,7 +31,7 @@ export default function Layout() {
             },
           ]}
         >
-          <Text style={{ color: "#F2AAC5", fontSize: 24 }}>♡ 우리의 온도</Text>
+          <Text style={{ color: "#F2AAC5", fontSize: 24 }}>♡ 두데이 (2DAY)</Text>
         </View>
       )}
     </AuthProvider>

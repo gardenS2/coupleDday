@@ -2,6 +2,8 @@
 
 > **원칙:** 한 번에 **티켓 하나**만 구현한다. `docs/PRD.md`의 해당 연결 요구사항만 참조한다. 이미 완성된 기능은 재작성하지 않는다. 각 티켓 후 사용자에게 변경 파일·검증·남은 문제를 간결히 보고한다.
 
+> **앱 식별자 (APP-ID-01, 2026-11-13 확정):** `두데이 (2DAY)` · Expo slug `cpldday` · Android/iOS `com.cpldday.app` · URL scheme `coupledday`. EAS projectId는 저장소 설정에서 찾지 못했으므로 기존 연결 정보가 확인되기 전 새 프로젝트를 만들지 않는다.
+
 ## 시작 전에
 
 1. 프로젝트 문서 위치는 `docs/PRD.md`와 `docs/CODEX_TASK.md`다. 원본 Android 앱·소스는 없으며 제공 스크린샷을 참고해 새 앱 기능을 구현한다. 기존 Android 데이터 이관은 하지 않는다.

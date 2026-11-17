@@ -20,7 +20,11 @@
 5. Supabase Dashboard **Authentication → Sign In / Providers → Google**에서 첫 번째 Supabase Identity callback용 Web client ID/secret을 설정하고 provider를 활성화한다. Identity Linking을 위해 **Allow manual linking**을 켠다.
 6. Supabase **Authentication → URL Configuration → Redirect URLs**에 `coupledday://auth/callback`을 등록한다. 이 주소는 Supabase Auth Identity flow 전용이다. Calendar OAuth는 서버 callback 뒤 앱으로 돌아오므로 Google에 등록하는 redirect URI가 아니다.
 
-이 구현은 Google OAuth Web client를 통해 system browser → 서버 callback으로 진행하므로 Android/iOS 전용 OAuth client ID는 사용하지 않는다. 현재 [app.json](/Users/garden/DEV/coupleDday/apps/mobile/app.json)의 package/bundle ID `com.example.coupledday.mobile`은 임시값이며, 출시 전 고유 ID로 확정해야 한다.
+APP-ID-01에서 Expo slug `cpldday`, Android package/iOS bundle ID `com.cpldday.app`을 확정했고 기존 `coupledday` scheme을 유지한다. 현재 Google Calendar 인증은 Web OAuth client → 서버 callback 방식이라 Android/iOS client ID 및 인증서 지문을 직접 사용하지 않는다. Supabase Identity용 callback과 Calendar OAuth server callback URI는 앱 ID 변경 후에도 그대로다. 별도의 네이티브 Google OAuth client를 콘솔에 만들어 둔 경우 **Google Auth Platform → Clients**에서 Android package를 `com.cpldday.app`으로, iOS bundle ID를 `com.cpldday.app`으로 맞춘다. Google Android OAuth client는 Android package와 서명 인증서의 **SHA-1**을 사용한다. 개발·Play App Signing 인증서에 맞는 SHA-1을 각각 등록해야 할 수 있다. SHA-256은 이 앱에 설정된 Android OAuth client나 App Links가 요구하지 않으며, 현재 App Links도 구성하지 않았다. 출시용 인증서 지문은 저장소에 없다.
+
+앱 콜백은 기존 `expo-linking`과 app route를 사용하며, GC-02 Google Calendar 흐름에서 `expo-auth-session` API는 호출하지 않는다. 인증 응답은 서버 callback에서 처리하고 앱에는 결과 딥링크만 돌아온다.
+
+Android App Links의 HTTPS `intent-filter`와 `assetlinks.json`은 현재 구성되어 있지 않다. Supabase Identity의 앱 복귀 주소는 계속 `coupledday://auth/callback`, Calendar OAuth의 앱 복귀 주소는 `coupledday://auth/google-calendar-callback`이다. 새 앱 ID는 이전 설치본과 별도 앱이며, Android SecureStore 데이터는 앱 삭제 시 없어지고 iOS Keychain 세션도 새 bundle ID로 이관된다고 가정하면 안 된다. GC-02 인증 흐름은 Expo Go가 아니라 custom scheme이 포함된 Development Build에서 확인해야 한다.
 
 ## Supabase Edge Function Secrets
 
@@ -59,6 +63,7 @@
 - Google OAuth 동의 화면 검토 및 공개 배포 승인 여부 확인
 - Google 계정 변경을 위한 기존 token revoke 완료 흐름, 키 회전 운영 절차 검증
 - calendarList scope 및 공유 캘린더 선택·A/B 편집 권한 확인
+- 네이티브 OAuth client를 별도로 사용한다면 Google Cloud Console에서 Android package/iOS bundle ID를 `com.cpldday.app`으로 맞추고 실제 배포 서명 인증서 지문을 등록한다. 현재 Web OAuth 흐름에는 native client가 필요하지 않다.
 
 실제 일정 동기화와 Google 일정 삭제 전파는 구현하지 않았다. 기존 일정 삭제와 recovery/Outbox의 동일 트랜잭션 처리를 포함한 후속 안전 게이트 전까지 삭제 전파를 켜지 않는다.
 
@@ -66,4 +71,5 @@
 
 - [Google OAuth 2.0 웹 서버 흐름](https://developers.google.com/identity/protocols/oauth2/web-server): redirect URI, state, authorization code 및 offline access.
 - [Google API OAuth 자격 증명 만들기](https://developers.google.com/workspace/guides/create-credentials): Google Auth Platform에서 OAuth client를 만드는 위치.
+- [Expo 앱 링크 처리](https://docs.expo.dev/linking/into-app/) 및 [SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/): custom scheme용 Development Build와 앱 ID 변경 시 세션 저장 범위 참고.
 - [Supabase Edge Function Secrets](https://supabase.com/docs/guides/functions/secrets): GC 전용 서버 Secrets 등록, 예약 환경변수 및 런타임 기본 환경변수.

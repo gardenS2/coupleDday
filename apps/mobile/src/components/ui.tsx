@@ -199,7 +199,7 @@ export function Brand() {
         <Text style={{ color: colors.pink, fontSize: 20 }}>♡</Text>
       </View>
       <Text style={{ color: colors.pink, fontWeight: "600", letterSpacing: 2 }}>
-        우리의 온도
+        두데이 (2DAY)
       </Text>
     </View>
   );

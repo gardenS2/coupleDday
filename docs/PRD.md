@@ -1,6 +1,6 @@
 # 커플앱 Android/iOS 통합 개발 PRD
 
-> **문서 버전:** 1.1 · **작성일:** 2026-11-07 · **현행화:** 2026-11-11
+> **문서 버전:** 1.1 · **작성일:** 2026-11-07 · **현행화:** 2026-11-13
 > **대상:** React Native + Expo · Android / iOS · Codex 단계별 구현  
 > **제품 상태:** 기존 Android 앱은 없다. 제공된 Android 화면 스크린샷을 시각적 참고 자료로 사용해 React Native + Expo 앱을 신규 구현 중  
 > **문서 성격:** 화면으로 확인된 사실(F), 구현 제안(P), 확인 필요(TBD)를 구분한 개발 기준서
@@ -16,6 +16,14 @@
 - 제공 스크린샷은 UI와 표시 정보 참고 자료이며 기존 실행 앱·소스·저장소를 뜻하지 않는다. 이 프로젝트에는 기존 Android 앱이 없고, 기존 사용자 데이터 이관은 요청 범위에서 제외한다.
 
 ## 1. 제품 개요
+
+### 1.0 출시 브랜딩 및 앱 식별자 (APP-ID-01, 2026-11-13 확정)
+
+- 앱 표시명 / Expo `name`: `두데이 (2DAY)`
+- Expo `slug`: `cpldday`
+- Android `applicationId` / iOS `bundleIdentifier`: `com.cpldday.app`
+- 기존 URL scheme: `coupledday` 유지
+- Supabase 프로젝트·사용자 데이터 및 GC-01~GC-03 상태에는 변경 없음.
 
 ### 1.1 제품 목표
 

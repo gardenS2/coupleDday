@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "우리의 온도",
-    "slug": "couple-mobile",
+    "name": "두데이 (2DAY)",
+    "slug": "cpldday",
     "scheme": "coupledday",
     "version": "0.1.0",
     "userInterfaceStyle": "dark",
     "ios": {
-      "bundleIdentifier": "com.example.coupledday.mobile"
+      "bundleIdentifier": "com.cpldday.app"
     },
     "android": {
-      "package": "com.example.coupledday.mobile"
+      "package": "com.cpldday.app"
     },
     "plugins": [
       "expo-router",

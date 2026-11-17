@@ -45,7 +45,11 @@ npm run android:dev
 
 예: 특정 iOS 시뮬레이터 선택은 `npm run ios:dev -- --device`입니다. 개발 Android의 로컬 DB 주소는 자동으로 `10.0.2.2`로 바뀝니다. 두 플랫폼을 동시에 테스트할 때 로컬 DB 주소가 다른 번들이 섞이지 않도록 iOS를 종료한 뒤 Android 명령으로 서버를 새로 시작하는 순차 검증을 권장합니다. 클라우드 개발 DB는 두 플랫폼에서 같은 URL을 사용합니다.
 
-`prod`는 **운영 DB에 연결**하는 설정입니다. 로컬 release 실행이 스토어 업로드를 뜻하지 않습니다. 현재 Android release 서명은 테스트용이고, 앱 식별자도 `com.example.coupledday.mobile`입니다. 스토어 서명과 식별자는 출시 전에 별도로 설정해야 합니다.
+`prod`는 **운영 DB에 연결**하는 설정입니다. 로컬 release 실행이 스토어 업로드를 뜻하지 않습니다. APP-ID-01에서 앱 이름 `두데이 (2DAY)`, Expo slug `cpldday`, Android/iOS ID `com.cpldday.app`을 확정했습니다. Android release 서명은 테스트용이므로 배포 전 실제 Play App Signing 지문과 서명 자격증명을 별도로 설정해야 합니다.
+
+앱 ID 변경 전 설치본(`com.example.coupledday.mobile`)과 새 앱은 다른 앱으로 인식되어 같은 기기에 함께 설치할 수 있습니다. Supabase 사용자는 서버에 유지되므로 동일 이메일/로그인 방식으로 다시 로그인하면 기존 사용자 ID를 사용하지만, Expo SecureStore 세션은 앱 간 이관하지 않으므로 새 앱에서는 재로그인을 예상합니다. EAS projectId, `eas.json`, `updates.url`은 현재 저장소에서 찾지 못했습니다. APP-ID-01은 이를 만들거나 바꾸지 않았으므로 기존 EAS 프로젝트 연결 여부를 확인한 뒤 필요하면 기존 projectId를 설정해야 합니다.
+
+현재 `android/`와 `ios/`는 루트 `.gitignore`에서 제외된 Expo 생성 디렉터리입니다. 추적되는 원본 설정은 `apps/mobile/app.json`이며, native 디렉터리를 새로 생성할 때도 해당 설정에서 앱 표시명·package·bundle ID·scheme을 가져옵니다.
 
 ## 2. 환경 파일
 
